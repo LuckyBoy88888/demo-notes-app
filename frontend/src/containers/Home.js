@@ -1,13 +1,88 @@
-import React from "react";
+import { API } from "aws-amplify";
+import React, { Component } from "react";
+import { ListGroup, ListGroupItem } from "react-bootstrap";
+import { LinkContainer } from "react-router-bootstrap";
 import "./Home.css";
 
-export default function Home() {
-    return (
-        <div className="Home">
+export default class Home extends Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            isLoading: true,
+            notes: []
+        };
+    }
+
+    async componentDidMount() {
+        if (!this.props.isAuthenticated) {
+            return;
+        }
+
+        try {
+            const notes = await this.notes();
+            this.setState({ notes });
+        } catch (e) {
+            alert(e);
+        }
+
+        this.setState({ isLoading: false });
+    }
+
+    notes() {
+        return API.get("notes", "/notes");
+    }
+
+    renderNotesList(notes) {
+        return [{}].concat(notes).map(
+            (note, i) =>
+                i !== 0
+                    ?   <LinkContainer
+                            key={note.noteId}
+                            to={`/notes/${note.noteId}`}
+                        >
+                            <ListGroupItem header={note.content.trim().split("\n")[0]}>
+                                {"Created: " + new Date(note.createdAt).toLocaleString()}
+                            </ListGroupItem>
+                        </LinkContainer>
+                    :   <LinkContainer
+                            key="new"
+                            to="/notes/new"
+                        >
+                            <ListGroupItem>
+                                <h4>
+                                    <b>{"\uFF0B"}</b> Create a new note
+                                </h4>
+                            </ListGroupItem>
+                        </LinkContainer>
+        );
+    }
+
+    renderLander() {
+        return (
             <div className="lander">
                 <h1>Scratch</h1>
-                <p className="text-muted">A simple note taking app</p>
+                <p>A simple note talking app</p>
             </div>
-        </div>
-    );
+        );
+    }
+
+    renderNotes() {
+        return (
+            <div className="notes">
+                <h2 className="pb-3 mt-4 mb-3 border-bottom">Your Notes</h2>
+                <ListGroup>
+                    {!this.state.isLoading && this.renderNotesList(this.state.notes)}
+                </ListGroup>
+            </div>
+        );
+    }
+
+    render() {
+        return (
+            <div className="Home">
+                {this.props.isAuthenticated ? this.renderNotes() : this.renderLander()}
+            </div>
+        );
+    }
 }
