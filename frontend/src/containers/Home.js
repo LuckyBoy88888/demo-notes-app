@@ -1,64 +1,70 @@
 import { API } from "aws-amplify";
-import React, { Component } from "react";
+import React, { Component, useEffect, useState } from "react";
 import { ListGroup, ListGroupItem } from "react-bootstrap";
+import { BsPencilSquare } from "react-icons/bs";
 import { LinkContainer } from "react-router-bootstrap";
+import { useAppContext } from "../lib/contextLib";
+import { onError } from "../lib/errorLib";
 import "./Home.css";
 
-export default class Home extends Component {
-    constructor(props) {
-        super(props);
+export default function Home() {
 
-        this.state = {
-            isLoading: true,
-            notes: []
-        };
-    }
+    const [notes, setNotes] = useState([]);
+    const { isAuthenticated } = useAppContext();
+    const [isLoading, setIsLoading] = useState(true);
 
-    async componentDidMount() {
-        if (!this.props.isAuthenticated) {
-            return;
+    useEffect(() => {
+        async function onLoad() {
+            if (!isAuthenticated) {
+                return;
+            }
+
+            try {
+                const notes = await loadNotes();
+                setNotes(notes);
+            } catch (e) {
+                onError(e);
+            }
+
+            setIsLoading(false);
         }
 
-        try {
-            const notes = await this.notes();
-            this.setState({ notes });
-        } catch (e) {
-            alert(e);
-        }
+        onLoad();
+    }, [isAuthenticated]);
 
-        this.setState({ isLoading: false });
-    }
-
-    notes() {
+    function loadNotes() {
         return API.get("notes", "/notes");
     }
 
-    renderNotesList(notes) {
-        return [{}].concat(notes).map(
-            (note, i) =>
-                i !== 0
-                    ?   <LinkContainer
-                            key={note.noteId}
-                            to={`/notes/${note.noteId}`}
-                        >
-                            <ListGroupItem header={note.content.trim().split("\n")[0]}>
-                                {"Created: " + new Date(note.createdAt).toLocaleString()}
-                            </ListGroupItem>
+    function renderNotesList(notes) {
+        return (
+            <>
+                <LinkContainer to="/notes/new">
+                    <ListGroup.Item action className="py-3 text-nowrap text-text-truncate">
+                        <BsPencilSquare size={17} />
+                        <span className="ml-2 font-font-weight-bold">Create a new note</span>
+                    </ListGroup.Item>
+                </LinkContainer>
+                {
+                    notes.map   (({ noteId, content, createdAt }) => (
+                        <LinkContainer key={noteId} to={`/notes/${noteId}`}>
+                            <ListGroup.Item action>
+                                <span className="font-weight-bold">
+                                    {content.trim().split("\n")[0]}
+                                </span>
+                                <br />
+                                <span className="text-muted">
+                                    Created: {new Date(createdAt).toLocaleString()}
+                                </span>
+                            </ListGroup.Item>
                         </LinkContainer>
-                    :   <LinkContainer
-                            key="new"
-                            to="/notes/new"
-                        >
-                            <ListGroupItem>
-                                <h4>
-                                    <b>{"\uFF0B"}</b> Create a new note
-                                </h4>
-                            </ListGroupItem>
-                        </LinkContainer>
+                    ))
+                }
+            </>
         );
     }
 
-    renderLander() {
+    function renderLander() {
         return (
             <div className="lander">
                 <h1>Scratch</h1>
@@ -67,22 +73,20 @@ export default class Home extends Component {
         );
     }
 
-    renderNotes() {
+    function renderNotes() {
         return (
             <div className="notes">
                 <h2 className="pb-3 mt-4 mb-3 border-bottom">Your Notes</h2>
                 <ListGroup>
-                    {!this.state.isLoading && this.renderNotesList(this.state.notes)}
+                    {!isLoading && renderNotesList(notes)}
                 </ListGroup>
             </div>
         );
     }
 
-    render() {
-        return (
-            <div className="Home">
-                {this.props.isAuthenticated ? this.renderNotes() : this.renderLander()}
-            </div>
-        );
-    }
+    return (
+        <div className="Home">
+            {isAuthenticated ? renderNotes() : renderLander()}
+        </div>
+    );
 }

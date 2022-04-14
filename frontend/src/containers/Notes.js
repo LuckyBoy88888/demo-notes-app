@@ -3,6 +3,7 @@ import { API, Storage } from "aws-amplify";
 import { FormControl, FormGroup, FormLabel } from "react-bootstrap";
 import LoaderButton from "../components/LoaderButton";
 import { s3Upload } from "../libs/awsLib";
+import config from "../config";
 
 export default class Notes extends Component {
     constructor(props) {
